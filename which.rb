@@ -1,4 +1,7 @@
 #Simple ruby script to emulate the UNIX which command on Windows
+#
+###
+
 
 #make default search for exe, option for pathext
 #Add help file
