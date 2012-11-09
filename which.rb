@@ -1,13 +1,7 @@
 #Simple ruby script to emulate the UNIX which command on Windows
-#
-###
-
-
-#make default search for exe, option for pathext
-#Add help file
 
 filename = ARGV.first
-wildcard = ARGV[1]
+#wildcard = ARGV[1]
 
 #Path Stuff
 path = `path`
@@ -21,22 +15,26 @@ pathlist.collect! { |element|
   element = element.sub(/(\\)+$/,'')
   }
 
-#sanity checks (needs help)
+#produce help
 if not ARGV.first
-  puts "This script takes a filename as a parameter."
-  print "Enter a command to search for: "
-  filename = STDIN.gets.chomp()
-end
+  puts <<HELP_DOC
+NAME
+which - shows the full path of commands
 
-##if filename without .exe is passed, add it
-#if !(filename =~ (/.exe/)) and !(wildcard)
-#  filename = filename + ".exe"
-#end
+OPTIONS
+first parameter: command to search without extension (i.e. "which ruby")
+- .exe suffix is automatically added if omitted
 
-#if wildcard is passed
-if wildcard
-  filename = filename + ".*"
-  #puts "filename is #{filename}"
+second parameter (optional): -deep (i.e. "which irb -deep")
+- used if extension unknown and not found using regular search
+- will cycle through all executable command using PATHEXT variable.
+- no need to add (or guess) extension for commands to search for
+
+NOTES
+if command is in multiple locations all will be returned
+
+HELP_DOC
+  exit
 end
 
 #pathext
@@ -44,48 +42,36 @@ pathext = `set PATHEXT`
 pathext = pathext[8...-1]
 pathext = pathext.split(';')
 
-
 #regex for file
 reg1 = /#{filename}/i
 
-#pathlist
-#puts pathlist
-
-#main loop (comprehensive but slow)
-for p in pathlist 
-  command = `dir /b "#{p}\\#{filename}" 2>nul`
-  if (command =~(reg1))
-    puts "#{p}\\#{filename}"
-    break
-  end
+def mainloop(pathlist, filename, reg1)
+  for p in pathlist 
+    command = `dir /b "#{p}\\#{filename}" 2>nul`
+    if (command =~(reg1))
+      puts "#{p}\\#{filename}"
+      break
+    end
+  end  
 end
 
-def compsearch(pathlist, pathext)
+def compsearch(pathlist, pathext, filename, reg1)
   for p in pathlist
     for e in pathext
       command = `dir /b "#{p}\\#{filename}#{e}" 2>nul`
       if (command =~(reg1))
         puts "#{p}\\#{filename}#{e}"
-        break
       end
     end
   end
 end
 
-
-
-
-##main loop
-#for p in pathlist
-#  #puts "p is #{p}"
-#  #command = `dir #{p}\\#{filename} 2>nul`
-#  command = `dir /b "#{p}\\#{filename}" 2>nul`
-#  #print "output for #{p} is #{command}"
-#  #STDIN.gets
-#  #case insensitive regex for windows
-#  #reg1 = /#{filename}/i
-#  #puts "reg1 is #{reg1}"
-#  if (command =~(reg1))
-#    puts "#{p}"
-#  end
-#end
+if not ARGV.last == "-deep"
+  if !(filename =~ (/.exe/))
+    filename = filename + ".exe"
+  end
+  mainloop(pathlist, filename, reg1)
+else
+  puts "performing deep search, please wait..."
+  compsearch(pathlist, pathext, filename, reg1)
+end
